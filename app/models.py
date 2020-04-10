@@ -13,7 +13,9 @@ class User(db.Model):
     password = db.Column(db.String(30), nullable=False)
     head_link = db.Column(db.String(255))
     music_like = db.Column(db.Text)
-    story_history = db.Column(db.Text)
+    clt_topic = db.Column(db.Text)
+    introduction = db.Column(db.String(200))
+    voke_num = db.Column(db.Integer, server_default="0")
 
     # 通过用户查帖子
     topics = db.relationship("Topic", backref="user", lazy="dynamic")
@@ -21,6 +23,16 @@ class User(db.Model):
     replys = db.relationship("Reply", backref="user", lazy="dynamic")
     # 通过用户查评论
     comments = db.relationship("Comment", backref="user", lazy="dynamic")
+
+
+# 关注
+
+
+class Follow(db.Model):
+    __tablename__ = 'follow'
+    id = db.Column(db.Integer, primary_key=True)
+    follow_id = db.Column(db.Integer)
+    followed_id = db.Column(db.Integer)
 
 
 # 用户发的帖子
@@ -39,15 +51,10 @@ class Topic(db.Model):
     type_id = db.Column(db.Integer, db.ForeignKey("topicType.id"))
     # 回复的评论
     comments = db.relationship("Comment", backref="topic", lazy="dynamic")
-    # 查询点赞的用户 Topic.vokeusers.
-    vokeusers = db.relationship(
-        "User",
-        secondary="voke",
-        lazy="dynamic",
-        backref=db.backref("voke_topic", lazy="dynamic"))
 
     def __repr__(self):
         return "<{}>".format(self.title)
+
 
 # 用户发的帖子类型
 
@@ -59,6 +66,7 @@ class TopicType(db.Model):
     # 通过类型查帖子
     topics = db.relationship("Topic", backref="topicType", lazy="dynamic")
 
+
 # 评论内容
 
 
@@ -66,13 +74,25 @@ class Comment(db.Model):
     __tablename__ = 'comment'
     id = db.Column(db.Integer, primary_key=True)
     comment = db.Column(db.Text, nullable=False)
+    comment_time = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     topic_id = db.Column(db.Integer, db.ForeignKey("topic.id"))
-    comment_time = db.Column(db.DateTime)
 
     replys = db.relationship("Reply", backref="Comment", lazy="dynamic")
+    vokes = db.relationship("Voke", backref="Comment", lazy="dynamic")
 
-# 评论回复
+
+# 点赞
+
+
+class Voke(db.Model):
+    __tablename__ = 'voke'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    comment_id = db.Column(db.Integer, db.ForeignKey("comment.id"))
+
+
+# 评论的回复
 
 
 class Reply(db.Model):
@@ -81,9 +101,11 @@ class Reply(db.Model):
     reply_content = db.Column(db.Text, nullable=False)
     reply_time = db.Column(db.DateTime)
     to_uid = db.Column(db.Integer)  # 回复对象
+    topic_id = db.Column(db.Integer)
 
     from_uid = db.Column(db.Integer, db.ForeignKey("user.id"))  # 写这条回复的用户
     comment_id = db.Column(db.Integer, db.ForeignKey('comment.id'))
+
 
 # 小说
 
@@ -97,10 +119,12 @@ class Story(db.Model):
     introduction = db.Column(db.Text)
     images = db.Column(db.String(255))
 
-    StoryContents = db.relationship(
-        "StoryContent", backref="Story", lazy="dynamic")
-    storyHistorys = db.relationship(
-        "StoryHistory", backref="story", lazy="dynamic")
+    StoryContents = db.relationship("StoryContent",
+                                    backref="Story",
+                                    lazy="dynamic")
+    storyHistorys = db.relationship("StoryHistory",
+                                    backref="story",
+                                    lazy="dynamic")
 
 
 # 小说每张内容
@@ -124,14 +148,6 @@ class StoryHistory(db.Model):
     story_id = db.Column(db.Integer, db.ForeignKey("story.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
-# 点赞
-
-
-class Voke(db.Model):
-    __tablename__ = 'voke'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    topic_id = db.Column(db.Integer, db.ForeignKey("topic.id"))
 
 # 图片类型
 
@@ -141,6 +157,7 @@ class ImageType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(20))
     images = db.relationship("Images", backref="ImageType", lazy="dynamic")
+
 
 # 图片详情
 
